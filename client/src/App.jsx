@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { DiscordSDK } from "@discord/embedded-app-sdk";
 
-const CONNECTION_PORT = 'https://localhost:3001';
+const CONNECTION_PORT = 'http://localhost:3001';
 let socket;
 
-const discordSdk = new DiscordSDK('1338610790764122263');
+const discordSdk = new DiscordSDK(import.meta.env.VITE_DISCORD_CLIENT_ID);
 
 function App() {
   const [auth, setAuth] = useState(false);
@@ -29,8 +29,7 @@ function App() {
       await discordSdk.ready()
   
       const { code } = await discordSdk.commands.authorize({
-        // client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
-        client_id: '1338610790764122263',
+        client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
         response_type: "code",
         state: "",
         prompt: "none",

@@ -16,7 +16,7 @@ export default defineConfig({
     hmr: {
       clientPort: 443,
     },
-    allowedHosts: ['sheets-activities-bucks-toolkit.trycloudflare.com', 'localhost'],
+    allowedHosts: ['localhost'],
   },
   plugins: [react()],
 });

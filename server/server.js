@@ -5,53 +5,20 @@ import fetch from "node-fetch";
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Server } from 'socket.io';
 
-dotenv.config({ path: "../.env" });
+dotenv.config();
 
 const app = express();
 const server = createServer(app);
 const port = 3001;
+
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
   },
-  // transports: ['websocket'],
-  path: '/socket/',
+  transports: ['websocket'],
+  path: '/.proxy/socket/',
 });
-
-
-
-const genAI = new GoogleGenerativeAI("AIzaSyBEnq-XO7cNHs8byP7ZNkkT1x0R2vHslpg");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-const prompt = "Generate a word or short phrase (3 words or less) for a game. Make sure that most average people know the word or phrase. The word should be a pop culture reference, famous people like celebrities, politicians or athletes, or well-known landmarks, restaurants, popular games, and other non-person pop culture references. Reply with just the word/phrase. Don't hide the word/phrase. If it's a person make sure you use their full name, not initials. Don't repeat words you've used already. The words you've used so far are:";
-let usedWords = '';
-const roomData = {}; 
-
-const startRound = async(room) => {
-    
-  const result = await model.generateContent(prompt + usedWords);
-  const word = result.response.text();
-  usedWords = usedWords + word + " "
-  console.log('Used words', usedWords);
-
-  const users = roomData[room].users;
-  
-  const impostorIndex = Math.floor(Math.random() * users.length);
-  
-  roomData[room].word = word;
-  roomData[room].impostor = users[impostorIndex];
-
-  io.to(room).emit('round_started', roomData[room]);
-
-  console.log(`Round started in room ${room}. Word: ${word}, Impostor: ${roomData[room].impostor}`);
-};
-
-const endRound = (room, impostor) => {
-  io.to(room).emit('round_ended', impostor);
-  console.log('Emitted');
-  roomData[room].word = "";
-  roomData[room].impostor = "";
-}
 
 io.on('connection', (socket) => {
   console.log(`New user connected: ${socket.id}`);
@@ -149,9 +116,42 @@ io.on('connection', (socket) => {
   });
 });
 
+const genAI = new GoogleGenerativeAI(process.env.VITE_GOOGLE_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const prompt = "Generate a word or short phrase (3 words or less) for a game. Make sure that most average people know the word or phrase. The word should be a pop culture reference, famous people like celebrities, politicians or athletes, or well-known landmarks, restaurants, popular games, and other non-person pop culture references. Reply with just the word/phrase. Don't hide the word/phrase. If it's a person make sure you use their full name, not initials. Don't repeat words you've used already. The words you've used so far are:";
+let usedWords = '';
+const roomData = {}; 
+
+const startRound = async(room) => {
+    
+  const result = await model.generateContent(prompt + usedWords);
+  const word = result.response.text();
+  usedWords = usedWords + word + " "
+  console.log('Used words', usedWords);
+
+  const users = roomData[room].users;
+  
+  const impostorIndex = Math.floor(Math.random() * users.length);
+  
+  roomData[room].word = word;
+  roomData[room].impostor = users[impostorIndex];
+
+  io.to(room).emit('round_started', roomData[room]);
+
+  console.log(`Round started in room ${room}. Word: ${word}, Impostor: ${roomData[room].impostor}`);
+};
+
+const endRound = (room, impostor) => {
+  io.to(room).emit('round_ended', impostor);
+  console.log('Emitted');
+  roomData[room].word = "";
+  roomData[room].impostor = "";
+}
+
 app.use(express.json());
 
 app.get('/', (req, res) => {
+  console.log('getting')
   res.sendFile(__dirname + '/index.html');
 });
 
@@ -164,10 +164,8 @@ app.post("/api/token", async (req, res) => {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      client_id: '1338610790764122263',
-      // client_id: process.env.VITE_DISCORD_CLIENT_ID,
-      client_secret: 'IKSZw6VIgMTustFX2SSp0VtPbCUlHzrU',
-      // client_secret: process.env.DISCORD_CLIENT_SECRET,
+      client_id: process.env.VITE_DISCORD_CLIENT_ID,
+      client_secret: process.env.DISCORD_CLIENT_SECRET,
       grant_type: "authorization_code",
       code: req.body.code,
     }),
